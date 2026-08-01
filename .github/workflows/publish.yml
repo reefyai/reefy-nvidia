@@ -27,6 +27,9 @@ jobs:
       digest: ${{ steps.push.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: reefyai/reefy-nvidia
+          ref: main
 
       - name: Download exact Reefy build inputs
         uses: actions/download-artifact@v4
