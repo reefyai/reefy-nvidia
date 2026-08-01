@@ -117,6 +117,7 @@ def squash(source, destination):
     subprocess.run([
         'mksquashfs', str(source), str(destination),
         '-noappend', '-comp', 'xz', '-b', '1M', '-Xdict-size', '1M',
+        '-all-root', '-all-time', '0', '-mkfs-time', '0', '-no-xattrs',
         '-no-progress',
     ], check=True)
 

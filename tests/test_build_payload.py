@@ -2,6 +2,7 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/build_payload.py'
@@ -11,6 +12,17 @@ SPEC.loader.exec_module(MODULE)
 
 
 class BuildPayloadTests(unittest.TestCase):
+    def test_squashfs_is_reproducible(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(MODULE.subprocess, 'run') as run:
+            root = Path(temporary)
+            MODULE.squash(root / 'source', root / 'payload.squashfs')
+
+        command = run.call_args.args[0]
+        self.assertIn('-mkfs-time', command)
+        self.assertIn('-all-time', command)
+        self.assertIn('-all-root', command)
+
     def test_stages_native_libraries_firmware_tools_and_license(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
