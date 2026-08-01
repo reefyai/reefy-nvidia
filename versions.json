@@ -1,0 +1,15 @@
+{
+  "nvidia_driver": {
+    "version": "595.84",
+    "installer_url": "https://us.download.nvidia.com/XFree86/Linux-x86_64/595.84/NVIDIA-Linux-x86_64-595.84.run",
+    "installer_bytes": 423524924,
+    "installer_sha256": "99c404e52131bf27bca6da0268dcce3ebedc7a73ab174071a995cf1a6c5eba06",
+    "open_kernel_modules_url": "https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/595.84.tar.gz",
+    "open_kernel_modules_commit": "3f74968ea1486de6a21698eb22773fcd2f24d35c",
+    "open_kernel_modules_sha256": "750163b631cac7676ebd8927b54a6e17fc3f6c87174f206a5b202731ebc324eb"
+  },
+  "nvidia_container_toolkit": {
+    "version": "1.18.2"
+  }
+}
+

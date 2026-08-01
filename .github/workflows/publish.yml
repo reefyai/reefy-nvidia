@@ -1,0 +1,108 @@
+name: Publish Reefy NVIDIA provider
+
+on:
+  workflow_call:
+    inputs:
+      input_artifact:
+        description: Caller artifact containing modules, toolkit, and metadata
+        required: false
+        default: reefy-nvidia-inputs
+        type: string
+    outputs:
+      digest:
+        description: Published OCI manifest digest
+        value: ${{ jobs.publish.outputs.digest }}
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download exact Reefy build inputs
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.input_artifact }}
+          path: inputs
+
+      - name: Install build and registry tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends squashfs-tools
+          curl -fsSL \
+            https://github.com/oras-project/oras/releases/download/v1.3.0/oras_1.3.0_linux_amd64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin oras
+          curl -fsSL \
+            https://github.com/sigstore/cosign/releases/download/v2.5.3/cosign-linux-amd64 \
+            -o /tmp/cosign
+          sudo install -m 0755 /tmp/cosign /usr/local/bin/cosign
+
+      - name: Verify and download NVIDIA installer
+        run: |
+          url=$(python3 -c 'import json; print(json.load(open("versions.json"))["nvidia_driver"]["installer_url"])')
+          curl -fL --retry 3 -o NVIDIA.run "$url"
+          python3 -c 'import hashlib,json,pathlib; v=json.load(open("versions.json"))["nvidia_driver"]; p=pathlib.Path("NVIDIA.run"); assert p.stat().st_size == v["installer_bytes"]; assert hashlib.sha256(p.read_bytes()).hexdigest() == v["installer_sha256"]'
+          chmod 0755 NVIDIA.run
+
+      - name: Build immutable payloads
+        run: |
+          . inputs/metadata.env
+          python3 scripts/build_payload.py \
+            --installer NVIDIA.run \
+            --modules-dir inputs/modules-root \
+            --toolkit-dir inputs/toolkit \
+            --kernel-release "$KERNEL_RELEASE" \
+            --reefy-build-id "$REEFY_BUILD_ID" \
+            --kernel-abi-digest "sha256:$REEFY_KERNEL_ABI_SHA256" \
+            --output output
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: output
+          format: spdx-json
+          output-file: output/sbom.spdx.json
+
+      - name: Log in to GHCR
+        run: echo '${{ github.token }}' | oras login ghcr.io -u '${{ github.actor }}' --password-stdin
+
+      - name: Push OCI artifact
+        id: push
+        run: |
+          . inputs/metadata.env
+          version=$(python3 -c 'import json; print(json.load(open("versions.json"))["nvidia_driver"]["version"])')
+          tag="${version}-reefy-${REEFY_BUILD_ID}"
+          output=$(oras push "ghcr.io/reefyai/reefy-nvidia:$tag" \
+            --artifact-type application/vnd.reefy.artifact.v1 \
+            --config output/config.json:application/vnd.reefy.artifact.config.v1+json \
+            output/common.squashfs:application/vnd.reefy.squashfs.v1 \
+            output/kernel.squashfs:application/vnd.reefy.squashfs.v1)
+          printf '%s\n' "$output"
+          digest=$(printf '%s\n' "$output" | sed -n 's/^Digest: //p')
+          test -n "$digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          oras attach \
+            --artifact-type application/spdx+json \
+            "ghcr.io/reefyai/reefy-nvidia@$digest" \
+            output/sbom.spdx.json:application/spdx+json
+
+      - name: Sign published manifest with GitHub OIDC
+        run: cosign sign --yes "ghcr.io/reefyai/reefy-nvidia@${{ steps.push.outputs.digest }}"
+
+      - name: Attest payload build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            output/config.json
+            output/common.squashfs
+            output/kernel.squashfs
+            output/sbom.spdx.json
