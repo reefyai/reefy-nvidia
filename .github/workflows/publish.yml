@@ -56,6 +56,9 @@ jobs:
           python3 -c 'import hashlib,json,pathlib; v=json.load(open("versions.json"))["nvidia_driver"]; p=pathlib.Path("NVIDIA.run"); assert p.stat().st_size == v["installer_bytes"]; assert hashlib.sha256(p.read_bytes()).hexdigest() == v["installer_sha256"]'
           chmod 0755 NVIDIA.run
 
+      - name: Test payload builder
+        run: python3 -m unittest discover -s tests -v
+
       - name: Build immutable payloads
         run: |
           . inputs/metadata.env

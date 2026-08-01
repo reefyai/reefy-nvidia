@@ -40,6 +40,7 @@ class BuildPayloadTests(unittest.TestCase):
                 'MODULE:gpgpu\n')
             (extracted / 'libcuda.so.595.84').write_bytes(b'cuda')
             (extracted / 'nvidia-smi').write_bytes(b'smi')
+            (extracted / 'nvidia-smi').chmod(0o600)
             (extracted / 'nvidia_icd.json').write_text('{}')
             (extracted / '10_nvidia.json').write_text('{}')
             (extracted / 'LICENSE').write_text('license')
@@ -47,6 +48,7 @@ class BuildPayloadTests(unittest.TestCase):
                 (extracted / 'firmware' / name).write_bytes(name.encode())
             for name in ('nvidia-ctk', 'nvidia-cdi-hook'):
                 (toolkit / name).write_bytes(name.encode())
+                (toolkit / name).chmod(0o600)
 
             MODULE.stage_common(extracted, toolkit, output)
 
@@ -61,6 +63,10 @@ class BuildPayloadTests(unittest.TestCase):
                 'license')
             self.assertEqual(len(list(
                 (output / 'lib/firmware/nvidia/595.84').glob('gsp_*.bin'))), 2)
+            for name in ('nvidia-smi', 'nvidia-ctk', 'nvidia-cdi-hook'):
+                self.assertEqual(
+                    (output / 'usr/bin' / name).stat().st_mode & 0o777,
+                    0o755)
 
     def test_kernel_stage_requires_complete_module_set(self):
         with tempfile.TemporaryDirectory() as temporary:

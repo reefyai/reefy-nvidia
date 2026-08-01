@@ -29,6 +29,17 @@ def copy(source, destination):
     shutil.copy2(source, destination)
 
 
+def copy_executable(source, destination):
+    """Copy a host tool without trusting transport-preserved mode bits.
+
+    GitHub Actions artifact upload/download preserves file contents but
+    normalizes regular-file permissions. Provider inputs therefore arrive as
+    0644 even though Buildroot staged them as executables.
+    """
+    copy(source, destination)
+    destination.chmod(0o755)
+
+
 def extract_installer(installer, work):
     if installer.stat().st_size != DRIVER['installer_bytes']:
         raise SystemExit('NVIDIA installer size mismatch')
@@ -70,12 +81,12 @@ def stage_common(extracted, toolkit_dir, root):
                     pass
                 link.symlink_to(Path(values[-1]).name)
 
-    copy(extracted / 'nvidia-smi', root / 'usr/bin/nvidia-smi')
+    copy_executable(extracted / 'nvidia-smi', root / 'usr/bin/nvidia-smi')
     for binary in ('nvidia-ctk', 'nvidia-cdi-hook'):
         source = toolkit_dir / binary
         if not source.is_file():
             raise SystemExit(f'missing NVIDIA Container Toolkit binary: {source}')
-        copy(source, root / 'usr/bin' / binary)
+        copy_executable(source, root / 'usr/bin' / binary)
 
     copy(
         extracted / 'nvidia_icd.json',
