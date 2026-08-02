@@ -103,6 +103,24 @@ class BuildPayloadTests(unittest.TestCase):
                 self.assertEqual(
                     (output / 'usr/bin' / name).stat().st_mode & 0o777,
                     0o755)
+            hook = output / 'usr/lib/reefy/activate'
+            self.assertEqual(hook.stat().st_mode & 0o777, 0o755)
+            self.assertIn(
+                'NVIDIA driver found no usable GPUs', hook.read_text())
+
+    def test_config_selects_fixed_provider_activation_hook(self):
+        source = SCRIPT.read_text()
+        self.assertIn(
+            "'activation_hook': 'usr/lib/reefy/activate'", source)
+
+    def test_activation_hook_atomically_publishes_runtime_cdi(self):
+        script = (SCRIPT.parent / 'activate').read_text()
+        self.assertIn('--output="$temporary"', script)
+        self.assertIn('mv -f "$temporary" /run/cdi/nvidia.yaml', script)
+        self.assertIn('--driver-root="$DRIVER_ROOT" --dev-root=/', script)
+        self.assertIn(
+            'DRIVER_ROOT=/run/reefy-artifacts/providers/nvidia-driver', script)
+        self.assertNotIn('/sys/bus/pci', script)
 
     def test_kernel_stage_requires_complete_module_set(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -9,10 +9,13 @@ One published OCI manifest contains two SquashFS layers:
 - `kernel.squashfs`: open NVIDIA modules built by the exact Reefy kernel and
   toolchain identified in artifact metadata.
 
-The artifact is data, not a container and not an executable root hook. Reefy
-OS verifies and mounts it, then invokes its built-in `nvidia-driver`
-activator. Application images continue supplying CUDA runtime frameworks,
-TensorRT, PyTorch, Isaac Sim, and other app-specific libraries.
+The common payload includes the provider-owned activation hook at the fixed
+path `usr/lib/reefy/activate`. Reefy verifies and mounts the digest-pinned
+payload before invoking that hook. The hook lets the loaded NVIDIA driver
+determine whether usable hardware is present, activates the matched modules,
+firmware and userspace, and atomically publishes CDI only after successful
+initialization. Application images continue supplying CUDA runtime
+frameworks, TensorRT, PyTorch, Isaac Sim, and other app-specific libraries.
 
 The proprietary files are redistributed unchanged under section 1.1(d) of
 the NVIDIA Driver License Agreement. A copy of that agreement is included in

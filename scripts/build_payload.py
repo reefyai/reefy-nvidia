@@ -141,6 +141,8 @@ def stage_common(extracted, toolkit_dir, root):
     copy(
         extracted / 'LICENSE',
         root / 'usr/share/licenses/nvidia-driver/LICENSE')
+    copy_executable(
+        ROOT / 'scripts/activate', root / 'usr/lib/reefy/activate')
 
 
 def stage_kernel(modules_dir, kernel_release, root):
@@ -202,6 +204,7 @@ def main():
             VERSIONS['nvidia_container_toolkit']['version'],
         'architecture': 'x86_64',
         'publisher': 'reefyai',
+        'activation_hook': 'usr/lib/reefy/activate',
         'reefy_build_id': args.reefy_build_id,
         'kernel_abi_digest': args.kernel_abi_digest,
     }
