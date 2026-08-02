@@ -40,6 +40,15 @@ def copy_executable(source, destination):
     destination.chmod(0o755)
 
 
+def replace_symlink(destination, target):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        destination.unlink()
+    except FileNotFoundError:
+        pass
+    destination.symlink_to(target)
+
+
 def extract_installer(installer, work):
     if installer.stat().st_size != DRIVER['installer_bytes']:
         raise SystemExit('NVIDIA installer size mismatch')
@@ -73,15 +82,22 @@ def stage_common(extracted, toolkit_dir, root):
                 value for value in fields[4:]
                 if value != '/' and not value.startswith('MODULE:')]
             if values:
-                library_dir.mkdir(parents=True, exist_ok=True)
-                link = library_dir / Path(name).name
-                try:
-                    link.unlink()
-                except FileNotFoundError:
-                    pass
-                link.symlink_to(Path(values[-1]).name)
+                replace_symlink(
+                    library_dir / Path(name).name,
+                    Path(values[-1]).name)
+
+    ngx_library = library_dir / f'libnvidia-ngx.so.{DRIVER["version"]}'
+    if not ngx_library.is_file():
+        raise SystemExit('NVIDIA installer has no native NGX library')
+    replace_symlink(
+        library_dir / 'libnvidia-ngx.so.1', ngx_library.name)
+    replace_symlink(
+        library_dir / 'libnvidia-ngx.so', 'libnvidia-ngx.so.1')
 
     copy_executable(extracted / 'nvidia-smi', root / 'usr/bin/nvidia-smi')
+    copy_executable(
+        extracted / 'nvidia-ngx-updater',
+        root / 'usr/bin/nvidia-ngx-updater')
     for binary in ('nvidia-ctk', 'nvidia-cdi-hook'):
         source = toolkit_dir / binary
         if not source.is_file():
@@ -94,6 +110,26 @@ def stage_common(extracted, toolkit_dir, root):
     copy(
         extracted / '10_nvidia.json',
         root / 'usr/share/glvnd/egl_vendor.d/10_nvidia.json')
+    copy(
+        extracted / 'nvidia_layers.json',
+        root / 'usr/share/vulkan/implicit_layer.d/nvidia_layers.json')
+    for name in (
+            '09_nvidia_wayland2.json',
+            '10_nvidia_wayland.json',
+            '15_nvidia_gbm.json',
+            '20_nvidia_xcb.json',
+            '20_nvidia_xlib.json'):
+        copy(
+            extracted / name,
+            root / 'usr/share/egl/egl_external_platform.d' / name)
+    for name in (
+            f'nvidia-application-profiles-{DRIVER["version"]}-rc',
+            f'nvidia-application-profiles-{DRIVER["version"]}-key-documentation',
+            'nvoptix.bin'):
+        copy(extracted / name, root / 'usr/share/nvidia' / name)
+    copy(
+        extracted / 'sandboxutils-filelist.json',
+        root / 'usr/share/nvidia/files.d/sandboxutils-filelist.json')
     for source in sorted((extracted / 'firmware').glob('gsp_*.bin')):
         copy(
             source,
