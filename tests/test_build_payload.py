@@ -33,15 +33,15 @@ class BuildPayloadTests(unittest.TestCase):
             toolkit.mkdir()
             (extracted / 'firmware').mkdir()
             (extracted / '.manifest').write_text(
-                'libcuda.so.595.84 0755 CUDA_LIB NATIVE / MODULE:gpgpu\n'
+                'libcuda.so.595.104.02 0755 CUDA_LIB NATIVE / MODULE:gpgpu\n'
                 'libcuda.so.1 0000 CUDA_SYMLINK NATIVE / '
-                'libcuda.so.595.84 MODULE:gpgpu\n'
-                'libnvidia-ngx.so.595.84 0755 OPENGL_LIB NATIVE '
+                'libcuda.so.595.104.02 MODULE:gpgpu\n'
+                'libnvidia-ngx.so.595.104.02 0755 OPENGL_LIB NATIVE '
                 'MODULE:ngx\n'
-                './32/libcuda.so.595.84 0755 CUDA_LIB COMPAT32 / '
+                './32/libcuda.so.595.104.02 0755 CUDA_LIB COMPAT32 / '
                 'MODULE:gpgpu\n')
-            (extracted / 'libcuda.so.595.84').write_bytes(b'cuda')
-            (extracted / 'libnvidia-ngx.so.595.84').write_bytes(b'ngx')
+            (extracted / 'libcuda.so.595.104.02').write_bytes(b'cuda')
+            (extracted / 'libnvidia-ngx.so.595.104.02').write_bytes(b'ngx')
             (extracted / 'nvidia-smi').write_bytes(b'smi')
             (extracted / 'nvidia-smi').chmod(0o600)
             (extracted / 'nvidia-ngx-updater').write_bytes(b'updater')
@@ -57,8 +57,8 @@ class BuildPayloadTests(unittest.TestCase):
                     '20_nvidia_xlib.json'):
                 (extracted / name).write_text('{}')
             for name in (
-                    'nvidia-application-profiles-595.84-rc',
-                    'nvidia-application-profiles-595.84-key-documentation',
+                    'nvidia-application-profiles-595.104.02-rc',
+                    'nvidia-application-profiles-595.104.02-key-documentation',
                     'nvoptix.bin',
                     'sandboxutils-filelist.json'):
                 (extracted / name).write_bytes(name.encode())
@@ -72,13 +72,13 @@ class BuildPayloadTests(unittest.TestCase):
             MODULE.stage_common(extracted, toolkit, output)
 
             self.assertEqual(
-                (output / 'usr/lib/libcuda.so.595.84').read_bytes(), b'cuda')
+                (output / 'usr/lib/libcuda.so.595.104.02').read_bytes(), b'cuda')
             self.assertEqual(
                 (output / 'usr/lib/libcuda.so.1').readlink(),
-                Path('libcuda.so.595.84'))
+                Path('libcuda.so.595.104.02'))
             self.assertEqual(
                 (output / 'usr/lib/libnvidia-ngx.so.1').readlink(),
-                Path('libnvidia-ngx.so.595.84'))
+                Path('libnvidia-ngx.so.595.104.02'))
             self.assertEqual(
                 (output / 'usr/lib/libnvidia-ngx.so').readlink(),
                 Path('libnvidia-ngx.so.1'))
@@ -87,7 +87,7 @@ class BuildPayloadTests(unittest.TestCase):
                 (output / 'usr/share/licenses/nvidia-driver/LICENSE').read_text(),
                 'license')
             self.assertEqual(len(list(
-                (output / 'lib/firmware/nvidia/595.84').glob('gsp_*.bin'))), 2)
+                (output / 'lib/firmware/nvidia/595.104.02').glob('gsp_*.bin'))), 2)
             self.assertEqual(
                 (output / 'usr/share/nvidia/nvoptix.bin').read_bytes(),
                 b'nvoptix.bin')

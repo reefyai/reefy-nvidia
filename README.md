@@ -23,7 +23,7 @@ every common payload.
 
 ## Version policy
 
-The production target is NVIDIA R595 Production Branch `595.84`. Kernel
+The production target is NVIDIA R595 Production Branch `595.104.02`. Kernel
 modules, GSP firmware, and userspace must always use the same release. The
 exact upstream URLs, source commit, sizes, and SHA-256 hashes are pinned in
 [`versions.json`](versions.json).
