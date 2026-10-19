@@ -55,7 +55,7 @@ jobs:
       - name: Verify and download NVIDIA installer
         run: |
           url=$(python3 -c 'import json; print(json.load(open("versions.json"))["nvidia_driver"]["installer_url"])')
-          curl -fL --retry 3 -o NVIDIA.run "$url"
+          curl -fL --retry 3 --retry-all-errors -o NVIDIA.run "$url"
           python3 -c 'import hashlib,json,pathlib; v=json.load(open("versions.json"))["nvidia_driver"]; p=pathlib.Path("NVIDIA.run"); assert p.stat().st_size == v["installer_bytes"]; assert hashlib.sha256(p.read_bytes()).hexdigest() == v["installer_sha256"]'
           chmod 0755 NVIDIA.run
 
