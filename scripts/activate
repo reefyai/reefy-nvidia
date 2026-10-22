@@ -27,6 +27,12 @@ bind_read_only() {
     fi
 }
 
+# Module-tree publication, depmod and modprobe share one host index.
+# Discovery and vendor-specific CDI publication below may overlap other hooks.
+mkdir -p /run/reefy-artifacts/locks
+exec 9>/run/reefy-artifacts/locks/host-module-activation
+flock -x 9
+
 bind_read_only "$MODULE_SOURCE" \
     "/lib/modules/$KERNEL_RELEASE/extra/nvidia"
 bind_read_only "$FIRMWARE_SOURCE" "/lib/firmware/nvidia"
@@ -88,6 +94,9 @@ modprobe nvidia
 modprobe nvidia-uvm
 modprobe nvidia-modeset
 modprobe nvidia-drm
+
+flock -u 9
+exec 9>&-
 
 # Let the NVIDIA driver determine whether it supports a GPU on this system.
 # Reefy and the provider hook do not maintain a PCI product-ID table.
