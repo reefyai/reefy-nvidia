@@ -33,7 +33,7 @@ jobs:
           ref: ${{ job.workflow_sha }}
 
       - name: Download exact Reefy build inputs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ inputs.input_artifact }}
           path: inputs
@@ -44,13 +44,21 @@ jobs:
           sudo python3 scripts/configure_apt_https.py
           timeout 300 sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 update
           timeout 300 sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 install -y --no-install-recommends squashfs-tools jq
-          curl -fsSL --connect-timeout 15 --max-time 120 --retry 2 \
+          download_tool() {
+            curl -fsSL --connect-timeout 15 --max-time 120 --retry 2 \
+              --retry-all-errors --retry-max-time 120 --remove-on-error \
+              --output "$2" "$1"
+          }
+          tool_dir=$(mktemp -d)
+          trap 'rm -rf "$tool_dir"' EXIT
+          download_tool \
             https://github.com/oras-project/oras/releases/download/v1.3.0/oras_1.3.0_linux_amd64.tar.gz \
-            | sudo tar -xz -C /usr/local/bin oras
-          curl -fsSL --connect-timeout 15 --max-time 120 --retry 2 \
+            "$tool_dir/oras.tar.gz"
+          download_tool \
             https://github.com/sigstore/cosign/releases/download/v2.5.3/cosign-linux-amd64 \
-            -o /tmp/cosign
-          sudo install -m 0755 /tmp/cosign /usr/local/bin/cosign
+            "$tool_dir/cosign"
+          sudo tar -xz -f "$tool_dir/oras.tar.gz" -C /usr/local/bin oras
+          sudo install -m 0755 "$tool_dir/cosign" /usr/local/bin/cosign
 
       - name: Verify and download NVIDIA installer
         run: |
